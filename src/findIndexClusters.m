@@ -25,7 +25,6 @@ function [c] = findIndexClusters(indices)
     % generate output cell array
     c = cell(2, length(cluster_start_indices));
     for i=1:length(cluster_start_indices)
-        c1 = cluster_start_indices(i);
         if i==length(cluster_start_indices)
             c{2, i} = indices(cluster_start_indices(i):end);
         else

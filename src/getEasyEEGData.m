@@ -11,7 +11,13 @@ end
 % ss is the signal with the moving average subtracted
 eegSignal=data(:, 7);
 t = data(:, 13);
-slide = movmean(eegSignal, nslide);
+
+if verLessThan('matlab','9.0')
+    % -- Code to run in MATLAB < R2016a 
+    slide = movingmean(eegSignal, nslide);
+else
+    slide = movmean(eegSignal, nslide);
+end
 eegSignalSub = eegSignal-slide;
 
 end

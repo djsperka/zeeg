@@ -1,4 +1,4 @@
-function [blob] = esSync(folder, smrfile)
+function [blob] = esSync(folder, smrfile, v2Txt)
 % esSync computes synchronization params for smr+eeg files.
 %
 % folder - folder where easy files and smr-exported mat file found
@@ -12,7 +12,7 @@ approxEEGWidth = 10;   % accept this wide for averaging
 smrSkipMarkers = 3;
 minPulsesInEasyFile = 15;
 
-ezFiles = getEasyFiles(folder);
+ezFiles = getEasyFiles(folder, v2Txt);
 
 % Identify base pulse. ezFiles{1} is the baseline eeg file. Prompt user to
 % identify a particular pulse and specify what its position is, counting

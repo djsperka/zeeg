@@ -10,12 +10,19 @@ if (size(d, 2) ~= 13)
 end
 tStart = d(1, 13);
 tEnd = d(end, 13);
+tclusters=[];
 
-% s is the eeg signal itself
-% ss is the signal with the moving average subtracted
-s=d(:, 7);
-slide = movmean(s, nslide);
-ss = s-slide;
+[ d, eeg, ss, t] = getEasyEEGData(filename, nslide);
+% d=importdata(filename);
+% if (size(d, 2) ~= 13)
+%     error('Error - easy file should have 13 columns, file %s has %d', filename, size(d, 2));
+% end
+% 
+% % s is the eeg signal itself
+% % ss is the signal with the moving average subtracted
+% s=d(:, 7);
+% slide = movmean(s, nslide);
+% ss = s-slide;
 
 % figure;
 % subplot(2, 1, 1);
@@ -68,8 +75,10 @@ end
 %end
 
 % The cluster averages are indices, not time values. 
-cr = round(clusters);
-tclusters=d(cr, 13) + 2*(clusters-cr)';
+if ~isempty(clusters)
+    cr = round(clusters);
+    tclusters=d(cr, 13) + 2*(clusters-cr)';
+end
 
 % figure;
 % subplot(4, 1, 1);

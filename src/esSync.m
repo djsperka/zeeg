@@ -3,6 +3,15 @@ function [blob] = esSync(folder, smrfile)
 %
 % folder - folder where easy files and smr-exported mat file found
 % smrfile - mat filename of exported file
+%
+% The returned blob is a cell array with 4 elements
+% blob{1,1} = the time, in smr time, of each pulse (taken from mat file)
+% blob{1,2} = the index of the SMR base pulse
+% blob{1,3} = the t, in EEG time, of the base pulse in the EEG file
+% blob{1,4} = cell array, 1 row for each *.easy file
+%             within each row, first column=filename
+%                              second column=t(EEG time), of found pulses
+%                              third column=index of found pulses
 
 
 nslide = 50;
@@ -74,11 +83,11 @@ blob = cell(1, 4);
 blob{1, 1} = tSMRPulses;
 blob{1, 2} = indexSMRBase;
 blob{1, 3} = tEEGBase;
-subblob = cell(length(ezFiles), 3);
+subblob = cell(length(ezFiles), 4);
 
 for i=1:length(ezFiles)
     fprintf(1, 'Look at ez file: %s\n', ezFiles{i});
-    [clusters, tclusters] = getEasyPulses(ezFiles{i}, nslide, lodiffthresh);
+    [clusters, tclusters, tStart, tEnd] = getEasyPulses(ezFiles{i}, nslide, lodiffthresh);
     fprintf(1, 'Found %d pulses\n', length(clusters));
 
     if length(clusters) > minPulsesInEasyFile
@@ -124,6 +133,7 @@ for i=1:length(ezFiles)
         subblob{i, 1} = ezFiles{i};
         subblob{i, 2} = tFoundPulses;
         subblob{i, 3} = indexFoundPulses;
+        subblob{i, 4} = [tStart, tEnd];
     end
 end
 

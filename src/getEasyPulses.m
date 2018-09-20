@@ -1,12 +1,15 @@
-function [clusters, tclusters] = getEasyPulses(filename, nslide, lodiffthresh)
+function [clusters, tclusters, tStart, tEnd] = getEasyPulses(filename, nslide, lodiffthresh)
 % getEasyPulses Finds pulses in easy file 'filename'. Returns the indices
-% and the time values for each pulse. 
+% and the time values for each pulse. As a convenience, return the start
+% and end times of the easy file (in EEG time). 
 
 clusters=[];
 d=importdata(filename);
 if (size(d, 2) ~= 13)
     error('Error - easy file should have 13 columns, file %s has %d', filename, size(d, 2));
 end
+tStart = d(1, 13);
+tEnd = d(end, 13);
 
 % s is the eeg signal itself
 % ss is the signal with the moving average subtracted

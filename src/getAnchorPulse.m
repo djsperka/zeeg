@@ -1,6 +1,6 @@
 function [index, indexX] = getAnchorPulse(filename)
 
-[data, eeg, eegSub, t] = getEasyEEGData(filename, 50);
+[~, ~, eegSub, ~] = getEasyEEGData(filename, 50);
 figure;
 title(filename);
 plot(eegSub);

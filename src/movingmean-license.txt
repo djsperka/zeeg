@@ -1,3 +1,6 @@
+This license applies to the file 'movingmean.m'. This file implements a 
+moving mean function, needed for matlab < 2016a. djs
+
 Copyright (c) 2013, Glen Mackey
 All rights reserved.
 

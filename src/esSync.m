@@ -1,17 +1,15 @@
-function [blob] = esSync(folder, smrfile, v2Txt)
-% esSync computes synchronization params for smr+eeg files.
+function [s] = esSync(folder, smrfile, v2Txt)
+% esSync computes synchronization params for (e)eg&(s)mr files.
 %
 % folder - folder where easy files and smr-exported mat file found
 % smrfile - mat filename of exported file
 %
-% The returned blob is a cell array with 4 elements
-% blob{1,1} = the time, in smr time, of each pulse (taken from mat file)
-% blob{1,2} = the index of the SMR base pulse
-% blob{1,3} = the t, in EEG time, of the base pulse in the EEG file
-% blob{1,4} = cell array, 1 row for each *.easy file
-%             within each row, first column=filename
-%                              second column=t(EEG time), of found pulses
-%                              third column=index of found pulses
+% Returns a struct with these fields:
+% 'files' = struct with fields 'filename' and 'limits'
+% 'K' = conversion factor
+% 'tEEGBase' = eeg base time
+% 'tSMRBase' = smr base time
+%
 
 
 nslide = 50;
@@ -34,6 +32,7 @@ ezFiles = getEasyFiles(folder, v2Txt);
 % expected pulse pattern in smr file, i.e. the pulse after the initial
 % grouping is pulse "1". The var 'markerTsmr' obeys this convention. 
 
+fprintf(1, 'Get user input - where is anchor pulse in file: %s\n', ezFiles{1});
 [indexSMRBase, tEEGBaseSelected] = getAnchorPulse(ezFiles{1});
 [clusters, tclusters] = getEasyPulses(ezFiles{1}, nslide, lodiffthresh);
 %avgs = cell2mat(clusters(1, :));
@@ -85,10 +84,16 @@ blob{1, 2} = indexSMRBase;
 blob{1, 3} = tEEGBase;
 subblob = cell(length(ezFiles), 4);
 
+s = struct;
+f = struct;
+
+
 for i=1:length(ezFiles)
     fprintf(1, 'Look at ez file: %s\n', ezFiles{i});
     [clusters, tclusters, tStart, tEnd] = getEasyPulses(ezFiles{i}, nslide, lodiffthresh);
     fprintf(1, 'Found %d pulses\n', length(clusters));
+    f(i).filename = ezFiles{i};
+    f(i).limits = [tStart, tEnd];
 
     if length(clusters) > minPulsesInEasyFile
     
@@ -134,10 +139,62 @@ for i=1:length(ezFiles)
         subblob{i, 2} = tFoundPulses;
         subblob{i, 3} = indexFoundPulses;
         subblob{i, 4} = [tStart, tEnd];
+        
     end
 end
 
-blob{1, 4} = subblob;
+
+% Now the blob has info on all pulses identified in the EEG files, and the
+% associated pulses in the SMR file.
+% We also have the t, in EEG, of a particular pulse identified by the user.
+% For every pulse in the EEG files, compute the scale factor between the
+% clocks:
+% tS -tSB = K(tE - tEB)
+% where tS = time value in SMR 
+%       tSB = time (in SMR) of base pulse
+%       tE = time in EEG corresponding to tS
+%       tEB = time (in EEG) of base pulse
+% 
+% Expect the value of K to hit an asymptote, but with larger values for
+% indices closer to the base pulse. 
+
+
+% how many indices in total?
+nTotal = 0;
+for i=1:size(subblob, 1)
+    nTotal = nTotal + size(subblob{i, 3}, 1);
+end
+% allocate space for all points except the id'd base pulse
+allIndices = zeros(nTotal-1, 1);
+allK = zeros(nTotal-1, 1);
+
+count = 0;
+for i=1:size(subblob, 1)
+    tFoundPulses = subblob{i, 2};
+    indexFoundPulses = subblob{i, 3};
+    for j=1:length(tFoundPulses)
+        if (i>1 || j>1)
+            count = count+1;
+            allIndices(count) = indexFoundPulses(j);
+            allK(count) = (tSMRPulses(indexFoundPulses(j)) - tSMRBase)/(tFoundPulses(j)-tEEGBase);
+            fprintf(1, '%f %f %f %f %f\n', tSMRPulses(indexFoundPulses(j)), tSMRBase, tFoundPulses(j), tEEGBase, (allK(count)-.001)*1000000);
+        end
+    end
+end
+
+figure;
+plot(allIndices, allK);
+
+
+fprintf(1, 'Use K value at index %d: %f\n', allIndices(end), allK(end));
+
+s.files = f;
+s.K = allK(end);
+s.tSMRBase = tSMRBase;
+s.tEEGBase = tEEGBase;
+
+
+
 
 
 end

@@ -32,4 +32,4 @@ end
 
 figure;
 plot(allIndices, allK);
-ylim([0.9, 1.1]);
+%ylim([0.9, 1.1]);

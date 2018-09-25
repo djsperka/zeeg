@@ -19,7 +19,7 @@ The data stream has a regular series of TTL pulses that are simultaneously recor
 
 I apply a quick-and-dirty algorithm to locate pulses in the EEG data. 
 
-
+![Raw and Sliding-average-subtracted pulse channel data](./FindingPulses.jpg)
 
 
 Note that it is not critical that ALL pulses be identified. To a good first approximation the scale factor between the clocks is 1 (actually, its 0.001, because the SMR data in the mat file exported are converted to seconds, whereas the Enobio EEG data is marked with a time coordinate in milliseconds. Consequently, the position of the pulses in the sequence recorded in the EEG file can be identified with high confidence. Once a pulse is identified as a particular pulse, for example, the 10th pulse. The time value of the 10th pulse in the SMR data is known, and the value of K can be computed for that pulse. This computation is repeated for each pulse that is identified in the EEG file. 

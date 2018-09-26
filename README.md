@@ -9,7 +9,37 @@ The 'getEEGData' script uses the output from 'esSync' and fetches EEG data from 
 
 **Background**
 
-The 1401 and the Enobio each operate with their own clocks. Since the 1401 is central to our experiments, and all behavior and stimulus-related events are recorded there, analysis will typically call for data from time periods defined in SMR time units. Thus, I gear this conversion to convert FROM eeg time units TO smr units. 
+The 1401 and the Enobio each operate with their own clocks. Since the 1401 is central to our experiments, and all behavior and stimulus-related events are recorded there, analysis will call for data from time periods defined in SMR time units. 
+
+During DAQ, the 1401 generates a stream of TTL pulses 1s apart. At the start of DAQ, there is a burst of 3 pulses much closer together - these are intended to identify an anchor point connecting the SMR and the EEG data streams. Once we can connect a specific pulse in each data stream, we can associate all the pulses by simply counting out from the *base pulse*. 
+
+The data are stored in a single folder. That folder will contain a set of EEG data files with extension *\*.easy*, and a *mat* file exported from the SMR data file.
+
+**Algorithm**
+
+I assume that the clocks are _close_ to synchronized, and that if they're off, any drift in one of the clocks is linear over time. The eeg data is sampled at 500Hz, and each sample is timestamped with an integer clock value (ms). The *easy* files are loaded with 
+
+A single DAQ session with the EEG device yields a series of *\*.easy* files, each corresponding to the series of acquisition and stimulation periods used in the NIC configuration. The files follow a naming scheme that looks like this:
+
+```
+<timestamp>_<EEGDatasetName>_Baseline_EEG_Trial_1.easy
+<timestamp>_<EEGDatasetName>_Stim_Trial_1.easy
+... 2, 3, ...
+<timestamp>_<EEGDatasetName>_EEG_Trial_n.easy
+<timestamp>_<EEGDatasetName>_Stim_Trial_n.easy
+...
+<timestamp>_<EEGDatasetName>_Baseline_EEG_End.easy
+```
+The *"Stim"* files above are recorded during stimulation, and during that period the pulses are not recorded (mystery to us, as the pulses are continuous throughout, but the Enobio doesn't register the pulses in these files). So, we're only interested in the "Baseline" files and each of the "EEG_Trial" files. These files can be imported with ```importdata```, and the channel mapping looks like this:
+
+TODO - map of channels to columns in easy files. 
+
+ZZZZZZZZZZZZZZZZZZZZZZZ stop here. 
+
+
+
+Unfortunately, we find in practice that the EEG data is too noisy to reliably resolve the individual pulses in the burst. 
+Thus, I gear this conversion to convert FROM eeg time units (using time values obtained from SMR data file/mat) TO smr units. 
 
 Assume that clock in EEG data is shifted and has a simple linear scale factor from the "good" 1401-based clock. 
 

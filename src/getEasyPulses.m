@@ -13,22 +13,14 @@ tEnd = d(end, 13);
 tclusters=[];
 
 [ d, eeg, ss, t] = getEasyEEGData(filename, nslide);
-% d=importdata(filename);
-% if (size(d, 2) ~= 13)
-%     error('Error - easy file should have 13 columns, file %s has %d', filename, size(d, 2));
-% end
-% 
-% % s is the eeg signal itself
-% % ss is the signal with the moving average subtracted
-% s=d(:, 7);
-% slide = movmean(s, nslide);
-% ss = s-slide;
 
-% figure;
-% subplot(2, 1, 1);
-% plot(s);
-% subplot(2, 1, 2);
-% plot(ss);
+%  figure;
+%  subplot(2, 1, 1);
+%  plot(eeg(1:1000));
+%  title 'EEG pulse channel - RAW';
+%  subplot(2, 1, 2);
+%  plot(ss(1:1000));
+%  title 'EEG pulse channel - Slid. Avg. Subtracted';
 
 mmdiff = max(ss)-min(ss);
 

@@ -17,63 +17,71 @@ The data are stored in a single folder. That folder will contain a set of EEG da
 
 **Algorithm**
 
-I assume that the clocks are _close_ to synchronized, and that if they're off, any drift in one of the clocks is linear over time. The eeg data is sampled at 500Hz, and each sample is timestamped with an integer clock value (ms). The *easy* files are loaded with 
+When designing the experiment, we had hoped that we could use the 3-pulse group to automatically synchronize the SMR and EEG data sets. In practice that cluster is visible *to the eye* in the EEG data, but not easily resolved when the EEG data is noisy (which is often). So, we abandon hope of automatically identifying the cluster, and intead ask the user to identify where that cluster is, and select the first or second *individual* pulse in the EEG data. This pulse, and the corresponding pulse in the SMR data, are assumed to be *synchronized*.
 
-A single DAQ session with the EEG device yields a series of *\*.easy* files, each corresponding to the series of acquisition and stimulation periods used in the NIC configuration. The files follow a naming scheme that looks like this:
+I assume that the clocks are _close_ to synchronized, and that if they're off, any drift in one of the clocks is linear over time. The EEG and SMR data are fitted using a simple linear equation:
 
-```
-<timestamp>_<EEGDatasetName>_Baseline_EEG_Trial_1.easy
-<timestamp>_<EEGDatasetName>_Stim_Trial_1.easy
-... 2, 3, ...
-<timestamp>_<EEGDatasetName>_EEG_Trial_n.easy
-<timestamp>_<EEGDatasetName>_Stim_Trial_n.easy
-...
-<timestamp>_<EEGDatasetName>_Baseline_EEG_End.easy
-```
-The *"Stim"* files above are recorded during stimulation, and during that period the pulses are not recorded (mystery to us, as the pulses are continuous throughout, but the Enobio doesn't register the pulses in these files). So, we're only interested in the "Baseline" files and each of the "EEG_Trial" files. These files can be imported with ```importdata```, and the channel mapping looks like this:
-
-TODO - map of channels to columns in easy files. 
-
-ZZZZZZZZZZZZZZZZZZZZZZZ stop here. 
+t<sub>SMR</sub> - t<sub>SMR,base</sub> = K * (t<sub>EEG</sub> - t<sub>EEG,base</sub>)
 
 
-
-Unfortunately, we find in practice that the EEG data is too noisy to reliably resolve the individual pulses in the burst. 
-Thus, I gear this conversion to convert FROM eeg time units (using time values obtained from SMR data file/mat) TO smr units. 
-
-Assume that clock in EEG data is shifted and has a simple linear scale factor from the "good" 1401-based clock. 
-
-t(SMR)-t(SMR,base) = K * [ t(eeg)-t(eeg,base) ]
-
-The data stream has a regular series of TTL pulses that are simultaneously recorded by the 1401 and by the Enobio. Thus, we have many data points to use for computing the scale factor K. The offset is determined using input given by the user. The series of pulses that are recorded start with a sequence of 3 pulses close together, and are followed by pulses separated by about a second. The PLAN was that those three pulses would serve as an anchor - allowing for a clear identification of the same time point in both files - and hence determining the offset between the files. Unfortunately, the EEG data files in practice are too noisy for a clean, consistent identification of the pulse group. Instead, a user is asked to identify a single pulse in the train and specify *which pulse it is* in the sequence. (The easiest thing is to identify the first or second pulse in the train -- its important that the EXACT position in the train is known). 
-
-I apply a quick-and-dirty algorithm to locate pulses in the EEG data. 
+I apply a quick-and-dirty algorithm to locate pulses in the EEG data. First, a sliding average of the EEG data bins is subtracted from each value:
 
 ![Raw and Sliding-average-subtracted pulse channel data](./src/FindingPulses.jpg)
 
+To identify pulses in the resulting data, I collect a list of bins whose value exceeds a given value. The first value used is the max of all bins in the file, and successively lower values are used. At each step, we collect all bins that rise above the threshold. I assume that each pulse will have *adjacent* bins that rise aboce threshold, so adjacent above-threshold bins are grouped and their average time value is used as the pulse center. Once the centers of all pulses are found for a given threshold level, they are tested for consistency with the assumption that they lie a multiple of 1ms from the base pulse identified by the user. *(This is where the assumption that the EEG clock is nearly correct comes into play. The assumption is really that the drift in the relative speed of the EEG clock is such that it will not differ from the SMR clock by more than 1/2 of an EEG clock cycle over the time span of a single EEG data file. In practice this assumption is trivially correct since the EEG data files are approx 20s long.)*  Once we reach a threshold level where bins inconsistent with these requirements is encountered, the process stops and only the pulses identified at that point are used for this analysis.
 
 Note that it is not critical that ALL pulses be identified. To a good first approximation the scale factor between the clocks is 1 (actually, its 0.001, because the SMR data in the mat file exported are converted to seconds, whereas the Enobio EEG data is marked with a time coordinate in milliseconds. Consequently, the position of the pulses in the sequence recorded in the EEG file can be identified with high confidence. Once a pulse is identified as a particular pulse, for example, the 10th pulse. The time value of the 10th pulse in the SMR data is known, and the value of K can be computed for that pulse. This computation is repeated for each pulse that is identified in the EEG file. 
 
 
+**EEG Data**
+
+The eeg data is sampled at 500Hz, and each sample is timestamped with an integer clock value (ms). A single DAQ session with the EEG device yields a series of *\*.easy* files, each corresponding to the series of acquisition and stimulation periods used in the NIC configuration. The files follow a naming scheme that looks like this:
+
+```
+<timestamp>_<EEGDatasetName><v2Txt>_Baseline_EEG_Trial_1.easy
+<timestamp>_<EEGDatasetName><v2Txt>_Stim_Trial_1.easy
+... 2, 3, ...
+<timestamp>_<EEGDatasetName><v2Txt>_EEG_Trial_n.easy
+<timestamp>_<EEGDatasetName><v2Txt>_Stim_Trial_n.easy
+...
+<timestamp>_<EEGDatasetName><v2Txt>_Baseline_EEG_End.easy
+```
+The *"Stim"* files above are recorded during stimulation, and during that period the pulses are not recorded (mystery to us, as the pulses are continuous throughout, but the Enobio doesn't register the pulses in these files). So, we're only interested in the "Baseline" files and each of the "EEG_Trial" files.
+
+The *easy* files are loaded with ```getEasyFiles```:
+
+```
+ezFiles = getEasyFiles(folder, v2Txt);
+```
+where 
+```folder``` is the path to the folder containing the easy files
+```v2Txt``` is a string useful when data files have non-standard text in their names (apparently this is true for only one data set, all others follow the convention and this var can be an empty string)
+
+The return value ```ezFiles``` is a cell array of filenames, in order, satisfying the filename pattern below. The patterns ```*<v2Txt>_Baseline_EEG_Trial_1.easy```, ```*<v2Txt>_Baseline_EEG_End.easy```, and ```*<v2Txt>_EEG_Trial_*.easy``` are used to identify the data files in the EEG data set. *There should be only one such data set in the folder!*
 
 
 
-Enobio EEG device dumps data to a folder with *.easy* files. 
-File naming follows pattern of Stim-Trial-Stim-Trial.......
-We only look at _Trial_ files (no electrode recording during stimulation)
 
-The signals/pulses can be crappy. Don't sweat too hard, instead rely on consistency internally. 
-Load voltage stream for pulse channel, this channel _should_ have the TTL pulses generated by the script.
 
-Get sliding average and subtract it off. Take max/min of remaining signal, split into steps. 
-Step down from top to bottom, at each step find points above threshold. Clusters assumed to be adjacent
-indices. Check distance between clusters, quit when clusters closer together than a min distance. 
 
-Need more data to test with. 
+
 
 To run, 
 
->> blob=esSync('./../data', 'Dr. Zaius_eeg_000_20180126.mat');
+>> blob=esSync('./../data', 'Dr. Zaius_eeg_000_20180126.mat', '_v2');
 >> [allIndices, allK] = esSyncTest(blob);
 
-That should generate a plot of k - conversion factor between files.
+The struct returned in ```blob``` contains the following:
+
+```
+>> blob
+
+blob = 
+
+  struct with fields:
+
+       files: [1×81 struct]
+           K: 1.0000e-03
+    tSMRBase: 2.1554
+    tEEGBase: 1.5170e+12
+```
